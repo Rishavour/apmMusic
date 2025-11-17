@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="referrer" content="unsafe-url">
 <title>APM Music Player</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
@@ -12,8 +11,6 @@
   #dropArea.dragover { border-color:var(--accent); background:#222; }
   #playerContainer { display:none; flex-direction:column; height:100vh; }
   header { padding:15px; background:var(--card); text-align:center; font-size:1.4em; font-weight:bold; }
-  .warning { background:#ff4444; color:white; padding:10px; margin:10px; border-radius:8px; text-align:center; font-size:0.9em; }
-  .warning a { color:#fff; text-decoration:underline; }
   #playlist { flex:1; overflow-y:auto; padding:8px; }
   .track { background:var(--card); margin:6px 8px; border-radius:8px; overflow:hidden; transition:all 0.3s ease; cursor:pointer; }
   .track:hover { background:#2a2a2a; }
@@ -24,23 +21,21 @@
   .play-btn:hover { color:var(--accent); }
   .track-info { flex:1; min-width:0; }
   .details { max-height:0; overflow:hidden; transition:max-height 0.4s ease; background:#111; padding:0 16px; }
-  .track.expanded .details { max-height:400px; padding:12px 16px; }
+  .track.expanded .details { max-height:300px; padding:12px 16px; }
   .url { font-family:monospace; font-size:0.8em; word-break:break-all; background:#0004; padding:8px; border-radius:4px; margin:8px 0; }
   .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
   button { background:var(--accent); color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.85em; }
   button:hover { opacity:0.9; }
   .copy { background:#333; }
   .denied { color:var(--red); font-weight:bold; margin:8px 0; }
-  .workaround { background:#333; padding:8px; border-radius:4px; margin:8px 0; font-size:0.85em; line-height:1.6; }
   #controls { background:var(--card); padding:12px; text-align:center; }
   #nowPlaying { font-size:1.2em; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 10px; }
   #seekBar { width:100%; height:6px; background:#333; border-radius:3px; outline:none; margin:8px 0; }
   #seekBar::-webkit-slider-thumb { appearance:none; width:16px; height:16px; background:var(--accent); border-radius:50%; cursor:pointer; }
   #time { font-size:0.9em; color:var(--gray); }
-  .btns { display:flex; justify-content:center; align-items:center; gap:20px; font-size:1.8em; margin-top:8px; }
+  .btns { display:flex; justify-content:center; align-items:center; gap:20px; font-size:1.8em; }
   button.big { background:none; border:none; color:var(--text); cursor:pointer; }
   button.big:hover { color:var(--accent); }
-  #hiddenFrame { display:none; }
 </style>
 </head>
 <body>
@@ -52,12 +47,6 @@
 
 <div id="playerContainer">
   <header>APM Music Player</header>
-  
-  <div class="warning">
-    ⚠️ <strong>Referer Issue Detected:</strong> It blocks audio from external sites. 
-    <strong>Workaround:</strong> This page must be hosted on a web server (not file://) or use the browser extension method below.
-  </div>
-  
   <div id="playlist"></div>
   
   <div id="controls">
@@ -65,17 +54,15 @@
     <input type="range" id="seekBar" value="0" min="0" max="100">
     <div id="time">0:00 / 0:00</div>
     <div class="btns">
-      <button id="shuffleBtn" class="big" title="Shuffle">🔀</button>
-      <button id="prevBtn" class="big">⏮</button>
-      <button id="playPauseBtn" class="big">▶</button>
-      <button id="nextBtn" class="big">⏭</button>
-      <button id="repeatBtn" class="big" title="Repeat">🔁</button>
+      <button id="shuffleBtn" class="big" title="Shuffle">Shuffle</button>
+      <button id="prevBtn" class="big">Previous</button>
+      <button id="playPauseBtn" class="big">Play</button>
+      <button id="nextBtn" class="big">Next</button>
+      <button id="repeatBtn" class="big" title="Repeat">Repeat Off</button>
     </div>
   </div>
 </div>
 
-<!-- Hidden iframe to trick referer -->
-<iframe id="hiddenFrame" src="about:blank"></iframe>
 <audio id="audio" preload="metadata"></audio>
 
 <script>
@@ -83,7 +70,7 @@ let tracks = [];
 let currentIndex = 0;
 let shuffle = false;
 let repeatMode = 0;
-let loadedTrackIndex = -1;
+let loadedTrackIndex = -1; // Track which audio is currently loaded
 const audio = document.getElementById('audio');
 const playlistDiv = document.getElementById('playlist');
 const dropArea = document.getElementById('dropArea');
@@ -158,21 +145,11 @@ function renderPlaylist() {
         <div class="track-info">${i+1}. ${t.title} <span style="color:#666; font-weight:normal;">(${t.duration})</span></div>
       </div>
       <div class="details">
-        ${t.denied ? '<div class="denied">⛔ Access Denied by APM - Referer Check Failed</div>' : ''}
-        ${t.denied ? `
-          <div class="workaround">
-            <strong>Workarounds to fix this:</strong><br>
-            1. <strong>Browser Extension:</strong> Install <a href="https://chromewebstore.google.com/detail/modheader/idgpnmonknjnojddfkpgkljpfnnfcklj" target="_blank" style="color:#4af">ModHeader</a> 
-            → Add header: <code>Referer: https://www.apmmusic.com/</code><br>
-            2. <strong>Open directly:</strong> <button class="copy" onclick="window.open('${t.url}'); event.stopPropagation();">Open in New Tab</button><br>
-            3. <strong>Download via curl:</strong> <code style="font-size:0.75em; display:block; margin:4px 0;">curl "${t.url}" -H "Referer: https://www.apmmusic.com/" -o song.mp3</code>
-          </div>
-        ` : ''}
+        ${t.denied ? '<div class="denied">Access Denied by APM</div>' : ''}
         <div class="url">${t.url}</div>
         <div class="actions">
           <button class="copy" onclick="copyUrl('${t.url}'); event.stopPropagation();">Copy URL</button>
-          <button onclick="openInNewTab('${t.url}'); event.stopPropagation();">Open Direct</button>
-          <button onclick="copyCurl('${t.url}', '${t.title.replace(/'/g,"")}'); event.stopPropagation();">Copy curl Command</button>
+          <button onclick="forceDownload('${t.url}', '${t.title.replace(/'/g,"")}'); event.stopPropagation();">Download MP3</button>
         </div>
       </div>
     `;
@@ -183,55 +160,39 @@ function renderPlaylist() {
 
 function playThis(i) {
   loadTrack(i);
-  audio.play().catch(err => {
-    console.error('Play error:', err);
-    tracks[currentIndex].denied = true;
-    renderPlaylist();
-    document.querySelectorAll('.track')[currentIndex].classList.add('expanded');
-  });
+  audio.play().catch(err => console.error('Play error:', err));
   document.getElementById('playPauseBtn').textContent = '⏸';
 }
 
-function copyUrl(u) { 
-  navigator.clipboard.writeText(u); 
-  alert('✅ URL copied to clipboard!'); 
+function copyUrl(u) { navigator.clipboard.writeText(u); alert('URL copied!'); }
+
+function forceDownload(url, title) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.mp3`;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
-function openInNewTab(url) {
-  window.open(url, '_blank');
-}
-
-function copyCurl(url, title) {
-  const cmd = `curl "${url}" -H "Referer: https://www.apmmusic.com/" -o "${title.replace(/[^a-z0-9]/gi, '_')}.mp3"`;
-  navigator.clipboard.writeText(cmd);
-  alert('✅ curl command copied! Paste in terminal to download.');
-}
-
-// ==================== PLAYER CORE ====================
+// ==================== PLAYER CORE (FIXED CACHING) ====================
 function loadTrack(i) {
   currentIndex = i < 0 ? tracks.length-1 : i % tracks.length;
   
+  // ONLY load if it's a different track than what's currently loaded
   if (loadedTrackIndex !== currentIndex) {
     const t = tracks[currentIndex];
     document.getElementById('nowPlaying').textContent = `${currentIndex+1}/${tracks.length} – ${t.title}`;
     
-    // Try to load with various methods
     audio.src = t.url;
-    audio.load();
+    audio.load(); // Only load once per track
     loadedTrackIndex = currentIndex;
 
     audio.onerror = () => {
       tracks[currentIndex].denied = true;
       renderPlaylist();
       document.querySelectorAll('.track')[currentIndex].classList.add('expanded');
-      
-      // Auto-skip to next track
-      setTimeout(() => {
-        if (currentIndex < tracks.length - 1) {
-          loadTrack(currentIndex + 1);
-          audio.play().catch(err => console.error('Auto-skip play error:', err));
-        }
-      }, 1000);
     };
   }
 
@@ -245,12 +206,7 @@ function updateHighlight() {
 // Controls
 document.getElementById('playPauseBtn').onclick = () => {
   if (audio.paused) { 
-    audio.play().catch(err => {
-      console.error('Play error:', err);
-      tracks[currentIndex].denied = true;
-      renderPlaylist();
-      document.querySelectorAll('.track')[currentIndex].classList.add('expanded');
-    }); 
+    audio.play().catch(err => console.error('Play error:', err)); 
     document.getElementById('playPauseBtn').textContent = '⏸'; 
   } else { 
     audio.pause(); 
@@ -268,22 +224,6 @@ document.getElementById('prevBtn').onclick = () => {
   audio.play().catch(err => console.error('Play error:', err)); 
 };
 
-// Shuffle
-document.getElementById('shuffleBtn').onclick = () => {
-  shuffle = !shuffle;
-  document.getElementById('shuffleBtn').style.color = shuffle ? 'var(--accent)' : 'var(--text)';
-};
-
-// Repeat
-document.getElementById('repeatBtn').onclick = () => {
-  repeatMode = (repeatMode + 1) % 3;
-  const btn = document.getElementById('repeatBtn');
-  if (repeatMode === 0) btn.textContent = '🔁';
-  else if (repeatMode === 1) btn.textContent = '🔂';
-  else btn.textContent = '🔂';
-  btn.style.color = repeatMode > 0 ? 'var(--accent)' : 'var(--text)';
-};
-
 // Seek bar
 const seek = document.getElementById('seekBar');
 audio.ontimeupdate = () => {
@@ -297,11 +237,10 @@ function fmt(s) { const m = Math.floor(s/60); const ss = Math.floor(s%60); retur
 
 audio.onended = () => {
   if (repeatMode === 2) {
-    audio.currentTime = 0;
-    audio.play().catch(err => console.error('Repeat error:', err));
+    audio.play().catch(err => console.error('Play error:', err));
   } else if (repeatMode === 1 || currentIndex < tracks.length-1) { 
-    loadTrack(shuffle ? Math.floor(Math.random() * tracks.length) : currentIndex + 1); 
-    audio.play().catch(err => console.error('Next track error:', err)); 
+    loadTrack(currentIndex + 1); 
+    audio.play().catch(err => console.error('Play error:', err)); 
   }
 };
 </script>
